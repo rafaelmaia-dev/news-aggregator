@@ -1,14 +1,17 @@
+from datetime import datetime
+
 from sqlalchemy import ForeignKey, String, Text, func
 
-from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
 
-from sqlalchemy.orm import Mapped, mapped_column
 
-class Articles(Base):
+class Article(Base):
     __tablename__ = "articles"
 
+    feed: Mapped["Feed"] = relationship("Feed", back_populates="article")
+    delivery: Mapped["Delivery"] = relationship("Delivery", back_populates="article")
     id: Mapped[int] = mapped_column(primary_key=True)
     url: Mapped[str] = mapped_column(String(2048), unique=True)
     content_full: Mapped[str] = mapped_column(Text())
@@ -18,3 +21,4 @@ class Articles(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
+  
