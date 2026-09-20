@@ -10,8 +10,8 @@ from src.database import Base
 class Article(Base):
     __tablename__ = "articles"
 
-    feed: Mapped["Feed"] = relationship("Feed", back_populates="article")
-    delivery: Mapped["Delivery"] = relationship("Delivery", back_populates="article")
+    feed: Mapped["Feed"] = relationship("Feed", back_populates="articles")
+    delivery: Mapped["Delivery"] = relationship("Delivery", back_populates="articles")
     id: Mapped[int] = mapped_column(primary_key=True)
     url: Mapped[str] = mapped_column(String(2048), unique=True)
     content_full: Mapped[str] = mapped_column(Text())
