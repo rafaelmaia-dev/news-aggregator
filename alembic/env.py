@@ -13,9 +13,9 @@ from sqlalchemy.engine import Connection
 from src.config import settings
 from src.database import Base
 
-import src.models.feeds
-import src.models.noticias
-import src.models.envio
+from src.models.feed import Feed
+from src.models.article import Article
+from src.models.delivery import Delivery
 
 
 config = context.config 
