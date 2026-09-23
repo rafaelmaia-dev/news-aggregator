@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import feedparser
 
 import httpx
@@ -14,7 +16,9 @@ async def fetch_feed(url: str) -> list[dict]:
         artigos.append({
             "titulo": entry.title,
             "url": entry.link,
-            "descricao": entry.summary
+            "content_full": entry.summary,
+            "published_at": datetime(*entry.published_parsed[:6]) if 
+        entry.published_parsed else None,
 
         })
 
