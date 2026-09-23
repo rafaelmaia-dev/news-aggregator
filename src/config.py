@@ -1,3 +1,8 @@
+from datetime import datetime, time
+
+from typing import Literal
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -6,7 +11,18 @@ class Settings(BaseSettings):
     TELEGRAM_CHAT_ID: int
     GROQ_API_KEY: str
     DATABASE_URL: str
-    
+    DELIVERY_MODE: Literal["digest", "realtime"] = "digest"
+    DIGEST_SCHEDULE: list[time]
+    DIGEST_MAX_ARTICLES: int
+
+    @field_validator("DIGEST_SCHEDULE", mode="before")
+    @classmethod
+    def parse_schedule(cls, v):
+        time_one = time.fromisoformat("08:00")
+        time_two = time.fromisoformat("18:00")
+        return time
+
 
 settings = Settings()
+
 
