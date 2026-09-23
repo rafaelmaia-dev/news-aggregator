@@ -1,109 +1,197 @@
-# Bot Agregador de Notícias IA/TI
+<div align="center">
 
-## Objetivo
+# 📰 News Aggregator
 
-Construir uma aplicação backend completa (API + worker + entrega via Telegram) que sirva como projeto-vitrine para vagas de backend júnior e DevOps júnior, cobrindo desde arquitetura de API até pipeline de CI/CD e deploy.
+**A self-hosted AI-powered news pipeline that fetches RSS feeds, summarizes articles with an LLM, and delivers them straight to your Telegram.**
 
----
+[Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Roadmap](#roadmap)
 
-## Escopo funcional (MVP)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Self-Hosted](https://img.shields.io/badge/self--hosted-yes-success)](https://github.com/rafaelmaia-dev/bot_noticias_ia)
 
-|Funcionalidade|Descrição|
-|---|---|
-|Fetch de RSS|Job agendado busca notícias de feeds de IA/TI configuráveis|
-|Deduplicação|Evita reprocessar notícias já enviadas (hash da URL/título no banco)|
-|Sumarização via LLM|Usa Groq para gerar resumo curto de cada notícia|
-|Persistência|Salva notícia + resumo + status de envio no PostgreSQL|
-|Entrega|Envia resumo formatado para um canal/grupo do Telegram|
-|API de consulta|Endpoints REST para listar notícias, filtrar por data/fonte, buscar por palavra-chave|
-|Autenticação|JWT para proteger endpoints administrativos (ex: adicionar/remover feed)|
-
-### Fora do MVP (backlog futuro, não travar o lançamento nisso)
-
-- Múltiplos canais de entrega (Slack, e-mail)
-- Interface web
-- Classificação por relevância/score
+</div>
 
 ---
 
-## Arquitetura
+## What is this?
+
+**News Aggregator** is an open-source backend project that automates your daily tech news reading.
+
+It runs two independent processes:
+
+- **Worker** — a scheduler that fetches RSS feeds, deduplicates articles, calls the [Groq API](https://groq.com) for LLM summarization, and dispatches formatted summaries to a Telegram chat.
+- **API** — a FastAPI REST service that exposes the persisted data for querying, filtering, and feed management (JWT-protected).
+
+Built as a portfolio project to demonstrate clean async backend architecture, containerization, and CI/CD pipelines.
+
+---
+
+## Architecture
 
 ```
-[APScheduler job] → busca RSS → [Groq API] → resumo
-        ↓
-   [PostgreSQL] ← persiste notícia
-        ↓
-   [Telegram Bot API] → entrega ao usuário
++----------------------------------------------------------+
+|                     Worker Process                       |
+|                                                          |
+|  APScheduler --> Fetcher --> Parser --> Deduplication    |
+|                                              |           |
+|                                         PostgreSQL       |
+|                                              |           |
+|                               Summarizer (Groq API)      |
+|                                              |           |
+|                          Dispatcher (Telegram Bot API)   |
++----------------------------------------------------------+
 
-[FastAPI app] → endpoints REST → [PostgreSQL]
++----------------------------------------------------------+
+|                      API Process                         |
+|                                                          |
+|   FastAPI --> Routers --> SQLAlchemy --> PostgreSQL       |
+|               (JWT auth for admin endpoints)             |
++----------------------------------------------------------+
 ```
 
-Dois processos lógicos separados:
-- **Worker** — scheduler, fetch RSS, sumarização e entrega via Telegram
-- **API** — FastAPI expondo os dados já persistidos via endpoints REST
+---
 
-## Stack técnica
+## Tech Stack
 
-|Camada|Tecnologia|
-|---|---|
-|API|FastAPI + Pydantic v2|
-|ORM|SQLAlchemy 2.0 (async, asyncpg)|
-|Banco|PostgreSQL|
-|Scheduler|APScheduler|
-|LLM|Groq API|
-|Entrega|python-telegram-bot ou requests direto na Bot API|
-|Testes|pytest + pytest-asyncio|
-|Qualidade|SonarCloud|
-|Segurança|Trivy (scan de imagem Docker)|
-|Container|Docker + Docker Compose|
-|CI/CD|GitHub Actions|
-|Deploy|Railway ou Fly.io (free tier) — ou VPS com Compose, se quiser praticar infra manual|
+| Layer        | Technology                                    |
+|--------------|-----------------------------------------------|
+| API          | FastAPI + Pydantic v2                         |
+| ORM          | SQLAlchemy 2.0 (async) + asyncpg              |
+| Database     | PostgreSQL                                    |
+| Scheduler    | APScheduler                                   |
+| LLM          | Groq API                                      |
+| Delivery     | Telegram Bot API                              |
+| Testing      | pytest + pytest-asyncio                       |
+| Code Quality | SonarCloud + Ruff                             |
+| Security     | Trivy (Docker image scanning)                 |
+| Container    | Docker + Docker Compose                       |
+| CI/CD        | GitHub Actions                                |
 
 ---
 
-## Fases de execução
+## Quick Start
 
-### Fase 1 — Core funcional (backend puro)
+**1. Clone the repository and set up your environment:**
 
-- [ ] Modelagem do banco (tabela feeds, noticias, envios)
-- [ ] Migrations com Alembic
-- [ ] Job de fetch RSS + parsing
-- [ ] Integração com Groq para sumarização
-- [ ] Integração com Telegram Bot API
-- [ ] Deduplicação funcionando ponta a ponta
+```bash
+git clone https://github.com/rafaelmaia-dev/bot_noticias_ia.git
+cd news-aggregator
 
-### Fase 2 — API REST
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-- [ ] Endpoints CRUD de feeds (protegidos por JWT)
-- [ ] Endpoints de consulta de notícias (públicos, com paginação e filtros)
-- [ ] Testes automatizados (unitários + pelo menos 1 teste de integração com banco de teste)
-- [ ] Documentação OpenAPI caprichada (descrições, exemplos de resposta)
+**2. Configure your environment variables:**
 
-### Fase 3 — Containerização
+```bash
+cp .env.example .env
+```
 
-- [ ] Dockerfile multi-stage para a API
-- [ ] Dockerfile para o worker
-- [ ] docker-compose.yml orquestrando API + worker + PostgreSQL
-- [ ] Variáveis sensíveis via .env (nunca commitado — .env.example no repo)
+Edit `.env` with your credentials:
 
-### Fase 4 — Pipeline CI/CD (o diferencial DevOps)
+```dotenv
+# Database
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/news_aggregator
 
-- [ ] Workflow GitHub Actions: lint (ruff/flake8) → testes (pytest) → SonarCloud
-- [ ] Etapa de build das imagens Docker
-- [ ] Scan de vulnerabilidade com Trivy nas imagens buildadas
-- [ ] Push das imagens para um registry (GitHub Container Registry é o mais simples)
-- [ ] Deploy automático no merge para main (Railway/Fly.io via CLI, ou webhook)
+# Telegram — get your token from @BotFather
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+TELEGRAM_CHAT_ID=your-chat-or-group-id
 
-### Fase 5 — Observabilidade (opcional, mas forte diferencial)
+# Groq — get your key at console.groq.com
+GROQ_API_KEY=your-groq-api-key
 
-- [ ] Endpoint /health e /ready
-- [ ] Logging estruturado (JSON logs)
-- [ ] Métricas básicas expostas para Prometheus (contagem de envios, erros de fetch)
+# Delivery settings
+DELIVERY_MODE=digest          # "digest" or "realtime"
+DIGEST_SCHEDULE=08:00,18:00   # HH:MM, comma-separated
+DIGEST_MAX_ARTICLES=10
+```
+
+**3. Run database migrations:**
+
+```bash
+alembic upgrade head
+```
+
+**4. Start the worker:**
+
+```bash
+python -m worker.scheduler
+```
+
+> Docker Compose support (API + Worker + PostgreSQL as containers) is coming in Phase 3.
 
 ---
 
-## Ordem de prioridade recomendada
+## Getting Started (Manual Setup)
 
-Fase 1 → Fase 2 → Fase 3 → Fase 4 → (Fase 5 se sobrar fôlego).
+> **Prerequisites:** Python 3.11+, PostgreSQL running locally or via Docker.
 
-Não pule para o CI/CD antes de ter o core funcional estável — pipeline testando código que ainda muda toda hora é retrabalho.
+```bash
+# Spin up PostgreSQL quickly with Docker
+docker run -d \
+  --name news-db \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=news_aggregator \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+Then follow the [Quick Start](#quick-start) steps above.
+
+---
+
+## Roadmap
+
+### Phase 0 — Scaffolding (done)
+- [x] Project structure, `.venv`, `requirements.txt`, Alembic, `.gitignore`, MIT License
+- [x] `src/config.py` — settings management via Pydantic Settings
+- [x] `src/database.py` — async SQLAlchemy engine + session factory
+
+### Phase 1 — Core Pipeline (in progress)
+- [ ] SQLAlchemy models: `Feed`, `Article`, `Delivery`
+- [ ] Alembic migrations
+- [ ] RSS fetcher + parser (`worker/fetcher.py`, `worker/parser.py`)
+- [ ] Groq summarizer (`worker/summarizer.py`)
+- [ ] Telegram dispatcher (`worker/dispatcher.py`)
+- [ ] APScheduler job orchestration (`worker/scheduler.py`)
+- [ ] End-to-end deduplication (by URL hash)
+
+### Phase 2 — REST API
+- [ ] Pydantic v2 schemas (request/response models)
+- [ ] Feed CRUD endpoints (JWT-protected)
+- [ ] Article query endpoints (public, with pagination and filters)
+- [ ] Automated tests (unit + integration with test database)
+- [ ] OpenAPI documentation with examples
+
+### Phase 3 — Containerization
+- [ ] Multi-stage Dockerfile for the API
+- [ ] Dockerfile for the worker
+- [ ] `docker-compose.yml` orchestrating API + Worker + PostgreSQL
+- [ ] `.env.example` with all required variables documented
+
+### Phase 4 — CI/CD Pipeline
+- [ ] GitHub Actions: lint (Ruff) → tests (pytest) → SonarCloud scan
+- [ ] Docker image build step
+- [ ] Trivy vulnerability scan on built images
+- [ ] Push to GitHub Container Registry
+- [ ] Automated deploy on merge to `main`
+
+### Phase 5 — Observability *(stretch goal)*
+- [ ] `/health` and `/ready` endpoints
+- [ ] Structured JSON logging
+- [ ] Prometheus metrics (delivery count, fetch errors)
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to set up your development environment and submit pull requests.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
