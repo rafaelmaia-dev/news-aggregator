@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     @field_validator("DIGEST_SCHEDULE", mode="before")
     @classmethod
     def parse_schedule(cls, v):
-        time_one = time.fromisoformat("08:00")
-        time_two = time.fromisoformat("18:00")
-        return time
+        if isinstance(v, str):
+            return [time.fromisoformat(t.strip()) for t in v.split(",")]
+        return v
 
 
 settings = Settings()
