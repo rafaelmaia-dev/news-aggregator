@@ -10,11 +10,11 @@ async def fetch_feed(url: str) -> list[dict]:
 
     feed = feedparser.parse(response.text)
 
-    artigos = []
+    articles = []
     
     for entry in feed.entries:
-        artigos.append({
-            "titulo": entry.title,
+        articles.append({
+            "title": entry.title,
             "url": entry.link,
             "content_full": entry.summary,
             "published_at": datetime(*entry.published_parsed[:6]) if 
@@ -22,4 +22,5 @@ async def fetch_feed(url: str) -> list[dict]:
 
         })
 
-    return artigos
+    return articles
+
