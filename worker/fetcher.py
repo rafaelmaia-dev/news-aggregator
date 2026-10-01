@@ -10,17 +10,14 @@ async def fetch_feed(url: str) -> list[dict]:
 
     feed = feedparser.parse(response.text)
 
-    articles = []
-    
-    for entry in feed.entries:
-        articles.append({
+    return[
+        {
             "title": entry.title,
             "url": entry.link,
             "content_full": entry.summary,
-            "published_at": datetime(*entry.published_parsed[:6]) if 
-        entry.published_parsed else None,
+            "published_at": datetime(*entry.published_parsed[:6]) if entry.published_parsed else None
 
-        })
-
-    return articles
-
+        }
+        for entry in feed.entries
+    
+    ]
